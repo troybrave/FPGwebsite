@@ -1,0 +1,48 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Configure Vercel project
+        run: |
+          mkdir -p .vercel
+          cat > .vercel/project.json <<JSON
+          {
+            "projectId": "${{ secrets.VERCEL_PROJECT_ID }}",
+            "orgId": "${{ secrets.VERCEL_ORG_ID }}",
+            "projectName": "fpg-church"
+          }
+          JSON
+
+      - name: Configure Vercel auth
+        run: |
+          mkdir -p "$HOME/.config/com.vercel.cli"
+          cat > "$HOME/.config/com.vercel.cli/auth.json" <<JSON
+          {
+            "token": "${{ secrets.VERCEL_TOKEN }}",
+            "refreshToken": "${{ secrets.VERCEL_REFRESH_TOKEN }}",
+            "expiresAt": 0
+          }
+          JSON
+
+      - name: Deploy production
+        run: npx --yes vercel@latest deploy --prod --yes --scope endlesswinning --token "${{ secrets.VERCEL_TOKEN }}"
